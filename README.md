@@ -1,15 +1,13 @@
-# Practice 02 — БД. SQL. Импорт CSV и реализация DAO
+# SQL. Импорт CSV и реализация DAO
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 17"/>
+  <img src="https://img.shields.io/badge/Maven-3.9+-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" alt="Maven"/>
+  <img src="https://img.shields.io/badge/H2_Database-2.2.224-1F6FEB?style=for-the-badge&logo=sqlite&logoColor=white" alt="H2 Database"/>
+  <img src="https://img.shields.io/badge/JDBC-java.sql-2F2F2F?style=for-the-badge&logo=oracle&logoColor=white" alt="JDBC"/>
+</p>
 
 Java + JDBC проект: импорт реального датасета [Students Performance in Exams](https://www.kaggle.com/datasets/spscientist/students-performance-in-exams) из CSV-файла в реляционную базу данных H2 и реализация слоя доступа к данным (DAO) с фильтрацией.
-
-## Стек технологий
-
-| Инструмент | Версия |
-|---|---|
-| Java | 17 |
-| Maven | 3.9+ |
-| H2 Database | 2.2.224 (embedded, файловая) |
-| JDBC | стандартный (`java.sql`) |
 
 ## Структура проекта
 
@@ -30,43 +28,6 @@ Practice_02-BD_SQL/
         ├── StudentDao.java          # интерфейс DAO (10 методов фильтрации)
         └── StudentDaoImpl.java      # реализация на JDBC
 ```
-
-## Требования для запуска
-
-- JDK 17+ в `PATH`
-- Maven 3.9+ в `PATH` (либо встроенный Maven в IntelliJ IDEA)
-- `StudentsPerformance.csv` в **корне проекта** (уже включён в репозиторий)
-
-## Как запустить
-
-### Через терминал
-
-```bash
-# 1. Собрать fat-jar (включает драйвер H2)
-mvn package -q
-
-# 2. Запустить из корня проекта (CSV должен быть в рабочей директории)
-java -jar target/Practice_02-BD_SQL-1.0-SNAPSHOT-jar-with-dependencies.jar
-```
-
-### Через IntelliJ IDEA
-
-1. Открыть проект — Maven автоматически подтянет зависимость H2.
-2. Запустить `org.example.Main`.
-
-При первом запуске программа создаёт файл `students_db.mv.db` в рабочей директории и импортирует все 1000 строк. При повторных запусках шаг импорта автоматически пропускается (см. `ensureDataImported()` в `Main.java`).
-
-## Параметры базы данных
-
-| Параметр | Значение |
-|---|---|
-| JDBC URL | `jdbc:h2:./students_db` |
-| Пользователь | `sa` |
-| Пароль | *(пусто)* |
-
-Просмотреть базу можно через H2 Console: `mvn exec:java -Dexec.mainClass=org.h2.tools.Console`.
-
----
 
 ## Задача 1 — Импорт CSV в базу данных
 
