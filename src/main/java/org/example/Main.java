@@ -29,9 +29,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 
 public class Main {
@@ -70,8 +70,8 @@ public class Main {
             throws SQLException, IOException {
 
         int count = 0;
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM students")) {
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT COUNT(*) FROM students");
+             ResultSet rs = pstmt.executeQuery()) {
             if (rs.next()) count = rs.getInt(1);
         }
 

@@ -9,7 +9,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 public class StudentImporter {
 
@@ -113,47 +112,48 @@ public class StudentImporter {
                 FROM students
                 """;
 
-        try (Statement stmt = connection.createStatement()) {
-            try (ResultSet rs = stmt.executeQuery(countSql)) {
-                if (rs.next()) {
-                    System.out.println("\n========================================");
-                    System.out.println("  SELECT COUNT(*) FROM students;");
-                    System.out.println("  Result: " + rs.getInt(1) + " rows");
-                    System.out.println("========================================");
-                }
+        try (PreparedStatement pstmt = connection.prepareStatement(countSql);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                System.out.println("\n========================================");
+                System.out.println("  SELECT COUNT(*) FROM students;");
+                System.out.println("  Result: " + rs.getInt(1) + " rows");
+                System.out.println("========================================");
             }
+        }
 
-            System.out.println("\n--- Score Statistics ---");
-            try (ResultSet rs = stmt.executeQuery(statsSql)) {
-                if (rs.next()) {
-                    System.out.printf("Math    score: min=%d  max=%d  avg=%.2f%n",
-                            rs.getInt("min_math"), rs.getInt("max_math"), rs.getDouble("avg_math"));
-                    System.out.printf("Reading score: min=%d  max=%d  avg=%.2f%n",
-                            rs.getInt("min_read"), rs.getInt("max_read"), rs.getDouble("avg_read"));
-                    System.out.printf("Writing score: min=%d  max=%d  avg=%.2f%n",
-                            rs.getInt("min_write"), rs.getInt("max_write"), rs.getDouble("avg_write"));
-                }
+        System.out.println("\n--- Score Statistics ---");
+        try (PreparedStatement pstmt = connection.prepareStatement(statsSql);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                System.out.printf("Math    score: min=%d  max=%d  avg=%.2f%n",
+                        rs.getInt("min_math"), rs.getInt("max_math"), rs.getDouble("avg_math"));
+                System.out.printf("Reading score: min=%d  max=%d  avg=%.2f%n",
+                        rs.getInt("min_read"), rs.getInt("max_read"), rs.getDouble("avg_read"));
+                System.out.printf("Writing score: min=%d  max=%d  avg=%.2f%n",
+                        rs.getInt("min_write"), rs.getInt("max_write"), rs.getDouble("avg_write"));
             }
+        }
 
-            System.out.println("\n--- First 5 rows ---");
-            try (ResultSet rs = stmt.executeQuery(
-                    "SELECT * FROM students ORDER BY id LIMIT 5")) {
-                System.out.printf("%-5s %-8s %-10s %-30s %-14s %-24s %-6s %-8s %-8s%n",
-                        "ID", "Gender", "Race/Eth", "Parent Education",
-                        "Lunch", "Test Prep", "Math", "Reading", "Writing");
-                System.out.println("-".repeat(110));
-                while (rs.next()) {
-                    System.out.printf("%-5d %-8s %-10s %-30s %-14s %-24s %-6d %-8d %-8d%n",
-                            rs.getInt("id"),
-                            rs.getString("gender"),
-                            rs.getString("race_ethnicity"),
-                            rs.getString("parental_level_of_education"),
-                            rs.getString("lunch"),
-                            rs.getString("test_preparation_course"),
-                            rs.getInt("math_score"),
-                            rs.getInt("reading_score"),
-                            rs.getInt("writing_score"));
-                }
+        System.out.println("\n--- First 5 rows ---");
+        try (PreparedStatement pstmt = connection.prepareStatement(
+                     "SELECT * FROM students ORDER BY id LIMIT 5");
+             ResultSet rs = pstmt.executeQuery()) {
+            System.out.printf("%-5s %-8s %-10s %-30s %-14s %-24s %-6s %-8s %-8s%n",
+                    "ID", "Gender", "Race/Eth", "Parent Education",
+                    "Lunch", "Test Prep", "Math", "Reading", "Writing");
+            System.out.println("-".repeat(110));
+            while (rs.next()) {
+                System.out.printf("%-5d %-8s %-10s %-30s %-14s %-24s %-6d %-8d %-8d%n",
+                        rs.getInt("id"),
+                        rs.getString("gender"),
+                        rs.getString("race_ethnicity"),
+                        rs.getString("parental_level_of_education"),
+                        rs.getString("lunch"),
+                        rs.getString("test_preparation_course"),
+                        rs.getInt("math_score"),
+                        rs.getInt("reading_score"),
+                        rs.getInt("writing_score"));
             }
         }
     }

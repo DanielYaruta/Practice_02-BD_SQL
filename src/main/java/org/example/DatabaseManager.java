@@ -2,8 +2,8 @@ package org.example;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 public class DatabaseManager {
 
@@ -30,8 +30,8 @@ public class DatabaseManager {
                 )
                 """;
 
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute(sql);
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.execute();
             System.out.println("[DB] Table 'students' created (or already exists).");
         }
     }
