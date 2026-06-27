@@ -1,127 +1,175 @@
-# Practice 02 — BD SQL: CSV Import & DAO
+# Practice 02 — БД. SQL. Импорт CSV и реализация DAO
 
-Java + JDBC project that imports the [Students Performance in Exams](https://www.kaggle.com/datasets/spscientist/students-performance-in-exams) dataset from a CSV file into an H2 relational database and exposes a full DAO layer for querying the data.
+Java + JDBC проект: импорт реального датасета [Students Performance in Exams](https://www.kaggle.com/datasets/spscientist/students-performance-in-exams) из CSV-файла в реляционную базу данных H2 и реализация слоя доступа к данным (DAO) с фильтрацией.
 
-## Technologies
+## Стек технологий
 
-| Tool | Version |
+| Инструмент | Версия |
 |---|---|
 | Java | 17 |
 | Maven | 3.9+ |
-| H2 Database | 2.2.224 (embedded, file-based) |
-| JDBC | standard (`java.sql`) |
+| H2 Database | 2.2.224 (embedded, файловая) |
+| JDBC | стандартный (`java.sql`) |
 
-## Project Structure
+## Структура проекта
 
 ```
 Practice_02-BD_SQL/
-├── StudentsPerformance.csv          # Kaggle dataset (1 000 rows)
+├── StudentsPerformance.csv          # датасет Kaggle (1000 строк)
 ├── pom.xml
+├── README.md
+├── screenshots/                     # скриншоты выполнения (этот README)
 └── src/main/java/org/example/
-    ├── Main.java                    # Entry point — runs import + DAO demo
-    ├── DatabaseManager.java         # Connection factory + CREATE TABLE
-    ├── StudentImporter.java         # Batch CSV → DB import (Task 1)
-    ├── CsvParser.java               # RFC-4180 CSV line parser
+    ├── Main.java                    # точка входа — импорт + демонстрация DAO
+    ├── DatabaseManager.java         # фабрика соединений + CREATE TABLE
+    ├── StudentImporter.java         # батчевый импорт CSV → БД (Задача 1)
+    ├── CsvParser.java                # CSV-парсер с поддержкой кавычек (RFC-4180)
     ├── model/
-    │   └── Student.java             # Entity class
+    │   └── Student.java             # модель сущности
     └── dao/
-        ├── StudentDao.java          # DAO interface (10 filter methods)
-        └── StudentDaoImpl.java      # JDBC implementation
+        ├── StudentDao.java          # интерфейс DAO (10 методов фильтрации)
+        └── StudentDaoImpl.java      # реализация на JDBC
 ```
 
-## Prerequisites
+## Требования для запуска
 
-- JDK 17+ on `PATH`
-- Maven 3.9+ on `PATH` (or use the IntelliJ built-in Maven)
-- `StudentsPerformance.csv` in the **project root** (already included)
+- JDK 17+ в `PATH`
+- Maven 3.9+ в `PATH` (либо встроенный Maven в IntelliJ IDEA)
+- `StudentsPerformance.csv` в **корне проекта** (уже включён в репозиторий)
 
-## How to Run
+## Как запустить
 
-### Terminal
+### Через терминал
 
 ```bash
-# 1. Build a fat JAR (includes H2 driver)
+# 1. Собрать fat-jar (включает драйвер H2)
 mvn package -q
 
-# 2. Run from the project root (CSV must be in the working directory)
+# 2. Запустить из корня проекта (CSV должен быть в рабочей директории)
 java -jar target/Practice_02-BD_SQL-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
 
-### IntelliJ IDEA
+### Через IntelliJ IDEA
 
-1. Open the project — Maven imports the H2 dependency automatically.
-2. Run `org.example.Main`.
+1. Открыть проект — Maven автоматически подтянет зависимость H2.
+2. Запустить `org.example.Main`.
 
-On first run the program creates `students_db.mv.db` in the working directory and imports all 1 000 rows. On subsequent runs the import step is skipped automatically.
+При первом запуске программа создаёт файл `students_db.mv.db` в рабочей директории и импортирует все 1000 строк. При повторных запусках шаг импорта автоматически пропускается (см. `ensureDataImported()` в `Main.java`).
 
-## Database
+## Параметры базы данных
 
-| Parameter | Value |
+| Параметр | Значение |
 |---|---|
 | JDBC URL | `jdbc:h2:./students_db` |
-| User | `sa` |
-| Password | *(empty)* |
+| Пользователь | `sa` |
+| Пароль | *(пусто)* |
 
-You can browse the database with the H2 Console (`mvn exec:java -Dexec.mainClass=org.h2.tools.Console`).
+Просмотреть базу можно через H2 Console: `mvn exec:java -Dexec.mainClass=org.h2.tools.Console`.
 
 ---
 
-## Task 1 — CSV Import
+## Задача 1 — Импорт CSV в базу данных
 
-`StudentImporter.importFromCsv()` reads `StudentsPerformance.csv` line by line and inserts every row using a `PreparedStatement` in batches of 100 inside a single transaction.
-
-**Table schema:**
+### Схема таблицы `students`
 
 ```sql
 CREATE TABLE IF NOT EXISTS students (
     id                          INTEGER AUTO_INCREMENT PRIMARY KEY,
-    gender                      VARCHAR(10),
-    race_ethnicity              VARCHAR(20),
-    parental_level_of_education VARCHAR(50),
-    lunch                       VARCHAR(20),
-    test_preparation_course     VARCHAR(20),
-    math_score                  INTEGER,
-    reading_score               INTEGER,
-    writing_score               INTEGER
+    gender                      VARCHAR(10)  NOT NULL,
+    race_ethnicity              VARCHAR(20)  NOT NULL,
+    parental_level_of_education VARCHAR(50)  NOT NULL,
+    lunch                       VARCHAR(20)  NOT NULL,
+    test_preparation_course     VARCHAR(20)  NOT NULL,
+    math_score                  INTEGER      NOT NULL,
+    reading_score               INTEGER      NOT NULL,
+    writing_score               INTEGER      NOT NULL
 );
 ```
 
-**Verification query printed at runtime:**
+### Как устроен импорт
+
+`StudentImporter.importFromCsv()`:
+1. Читает `StudentsPerformance.csv` построчно, пропуская заголовок.
+2. Парсит каждую строку через собственный `CsvParser` (корректно обрабатывает значения в кавычках).
+3. Вставляет данные через `PreparedStatement` — никакой конкатенации строк в SQL.
+4. Группирует вставки в батчи по 100 строк (`addBatch()` / `executeBatch()`) внутри одной транзакции.
+5. При ошибке — `rollback()`; строки с некорректным форматом (неверное число полей, нечисловой балл) пропускаются с предупреждением в консоль, не прерывая весь импорт.
+6. Все ресурсы (`Connection`, `PreparedStatement`, `BufferedReader`) закрываются через `try-with-resources`.
+
+### Скриншот: процесс импорта
+
+![Импорт CSV в базу данных](screenshots/01-import.png)
+
+Видно создание таблицы, построчный импорт с прогрессом по 100 строк и итог: **1000 из 1000 строк успешно импортированы**.
+
+### Проверка количества записей
+
+Сразу после импорта `findAll()` подтверждает результат (соответствует требуемому `SELECT COUNT(*) FROM students;`):
 
 ```
-SELECT COUNT(*) FROM students;
-Result: 1000 rows
+Total students: 1000
 ```
+
+(см. верхнюю часть скриншота в разделе «Задача 2» ниже)
 
 ---
 
-## Task 2 — DAO Layer
+## Задача 2 — Реализация DAO и фильтрация
 
-`StudentDao` interface with 10 methods, implemented in `StudentDaoImpl` using `PreparedStatement` and `try-with-resources` throughout.
+### Интерфейс `StudentDao`
 
-### Available filter methods
+10 методов фильтрации, реализованных в `StudentDaoImpl` с использованием `PreparedStatement` и `try-with-resources` во всех методах:
 
-| Method | Description |
+| Метод | Описание |
 |---|---|
-| `findAll()` | All 1 000 students |
-| `findByTestPreparationCourse(course)` | `"completed"` → 358 rows / `"none"` → 642 rows |
-| `findByMathScoreAbove(minScore)` | Math score strictly above threshold (ordered DESC) |
-| `findByReadingScoreAbove(minScore)` | Reading score strictly above threshold (ordered DESC) |
+| `findAll()` | Все 1000 студентов |
+| `findByTestPreparationCourse(course)` | `"completed"` → 358 строк / `"none"` → 642 строки |
+| `findByMathScoreAbove(minScore)` | Балл по математике выше порога (сортировка по убыванию) |
+| `findByReadingScoreAbove(minScore)` | Балл по чтению выше порога (сортировка по убыванию) |
 | `findByGender(gender)` | `"female"` → 518 / `"male"` → 482 |
-| `findByRaceEthnicity(group)` | By group A – E |
-| `findByGenderAndRaceEthnicity(gender, group)` | Combined filter; either param may be `null` |
-| `findByAllScoresAbove(minScore)` | All three scores above threshold |
-| `findTopByAverageScore(limit)` | Top-N by average score |
-| `findByParentalEducation(education)` | By parental level of education |
+| `findByRaceEthnicity(group)` | По этнической группе A – E |
+| `findByGenderAndRaceEthnicity(gender, group)` | Комбинированный фильтр; любой параметр может быть `null` |
+| `findByAllScoresAbove(minScore)` | Все три балла выше порога |
+| `findTopByAverageScore(limit)` | Топ-N студентов по среднему баллу |
+| `findByParentalEducation(education)` | По уровню образования родителя |
 
-### Sample output (top-10 by average score)
+### Архитектура реализации
+
+- Все запросы — статичные SQL-шаблоны с `?`-плейсхолдерами, без единого случая конкатенации значений в строку запроса (защита от SQL-инъекций).
+- Общая логика выполнения запроса и маппинга `ResultSet → Student` вынесена в приватный метод `queryList()`, использующий функциональный интерфейс `StatementPreparer` для связывания параметров — устраняет дублирование кода между методами.
+- Комбинированный фильтр `findByGenderAndRaceEthnicity` безопасно обрабатывает `null`-параметры через делегирование на более простые методы, а не динамическое построение SQL.
+- `Connection` передаётся в `StudentDaoImpl` через конструктор — DAO не управляет её жизненным циклом, что позволяет вызывающему коду контролировать границы транзакции.
+
+### Демонстрация работы — `Main.java`
+
+`runDaoDemo()` вызывает все 10 методов интерфейса и выводит результаты в виде читаемых таблиц.
+
+#### Скриншоты: результаты фильтрации
+
+**1–4. `findAll`, `findByTestPreparationCourse`, `findByMathScoreAbove`**
+
+![Результаты фильтрации — часть 1](screenshots/02-dao-filters-1.png)
+
+**5–7. `findByReadingScoreAbove`, `findByGender`, `findByRaceEthnicity`**
+
+![Результаты фильтрации — часть 2](screenshots/03-dao-filters-2.png)
+
+**8–10. `findByGenderAndRaceEthnicity`, `findByAllScoresAbove`, `findTopByAverageScore`**
+
+![Результаты фильтрации — часть 3](screenshots/04-dao-filters-3.png)
+
+**11. `findByParentalEducation`**
+
+![Результаты фильтрации — часть 4](screenshots/05-dao-filters-4.png)
+
+### Пример вывода (топ-10 по среднему баллу)
 
 ```
 ID    Gender   Race/Eth  Parental Education             Lunch         Test Prep   Math  Read  Write Avg
 ────────────────────────────────────────────────────────────────────────────────────────────────────────
-963   female   group E   associate's degree             standard      none        100   100   100   100,0
-917   male     group E   bachelor's degree              standard      completed   100   100   100   100,0
 459   female   group E   bachelor's degree              standard      none        100   100   100   100,0
+917   male     group E   bachelor's degree              standard      completed   100   100   100   100,0
+963   female   group E   associate's degree             standard      none        100   100   100   100,0
 115   female   group E   bachelor's degree              standard      completed   99    100   100   99,7
 180   female   group D   some high school               standard      completed   97    100   100   99,0
 ...
@@ -129,10 +177,11 @@ ID    Gender   Race/Eth  Parental Education             Lunch         Test Prep 
 
 ---
 
-## Key Design Decisions
+## Ключевые технические решения
 
-- **`PreparedStatement` everywhere** — no string concatenation in SQL, no SQL-injection risk.
-- **`try-with-resources`** on every `Connection`, `PreparedStatement`, and `ResultSet`.
-- **Batch insert** (100 rows per `executeBatch`) with a single transaction; `rollback()` on any error.
-- **Import guard** — `COUNT(*)` check prevents duplicate imports on repeated runs.
-- **`Connection` injected into `StudentDaoImpl`** — caller controls transaction scope; no hidden connection management inside the DAO.
+- **`PreparedStatement` везде** — ни одного места с конкатенацией значений в SQL-строку, защита от SQL-инъекций.
+- **`try-with-resources`** на каждом `Connection`, `PreparedStatement` и `ResultSet`.
+- **Батчевая вставка** (100 строк на `executeBatch`) в рамках одной транзакции; `rollback()` при любой ошибке.
+- **Защита от повторного импорта** — проверка `COUNT(*)` перед стартом импорта при повторных запусках.
+- **Внедрение `Connection` через конструктор `StudentDaoImpl`** — вызывающий код управляет границами транзакции, без скрытого управления соединением внутри DAO.
+- **Устойчивость к некорректным строкам CSV** — строки с неверным числом полей или нечисловыми баллами пропускаются с предупреждением, не прерывая весь импорт.
