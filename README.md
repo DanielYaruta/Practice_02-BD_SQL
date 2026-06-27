@@ -123,19 +123,6 @@ Total students: 1000
 
 ![Результаты фильтрации — часть 4](screenshots/05-dao-filters-4.png)
 
-### Пример вывода (топ-10 по среднему баллу)
-
-```
-ID    Gender   Race/Eth  Parental Education             Lunch         Test Prep   Math  Read  Write Avg
-────────────────────────────────────────────────────────────────────────────────────────────────────────
-459   female   group E   bachelor's degree              standard      none        100   100   100   100,0
-917   male     group E   bachelor's degree              standard      completed   100   100   100   100,0
-963   female   group E   associate's degree             standard      none        100   100   100   100,0
-115   female   group E   bachelor's degree              standard      completed   99    100   100   99,7
-180   female   group D   some high school               standard      completed   97    100   100   99,0
-...
-```
-
 ---
 
 ## Ключевые технические решения
