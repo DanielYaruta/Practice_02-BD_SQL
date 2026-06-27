@@ -1,6 +1,7 @@
 package org.example.dao;
 
 import org.example.model.Student;
+import org.example.validation.StudentValidator;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -75,45 +76,45 @@ public class StudentDaoImpl implements StudentDao {
 
     @Override
     public List<Student> findByTestPreparationCourse(String course) throws SQLException {
+        StudentValidator.validateNonBlankFilter("test_preparation_course", course).throwIfInvalid();
         String sql = SELECT_ALL + " WHERE test_preparation_course = ?";
         return queryList(sql, pstmt -> pstmt.setString(1, course));
     }
 
     @Override
     public List<Student> findByMathScoreAbove(int minScore) throws SQLException {
+        StudentValidator.validateScoreThreshold(minScore).throwIfInvalid();
         String sql = SELECT_ALL + " WHERE math_score > ? ORDER BY math_score DESC";
         return queryList(sql, pstmt -> pstmt.setInt(1, minScore));
     }
 
     @Override
     public List<Student> findByReadingScoreAbove(int minScore) throws SQLException {
+        StudentValidator.validateScoreThreshold(minScore).throwIfInvalid();
         String sql = SELECT_ALL + " WHERE reading_score > ? ORDER BY reading_score DESC";
         return queryList(sql, pstmt -> pstmt.setInt(1, minScore));
     }
 
     @Override
     public List<Student> findByGender(String gender) throws SQLException {
+        StudentValidator.validateNonBlankFilter("gender", gender).throwIfInvalid();
         String sql = SELECT_ALL + " WHERE gender = ?";
         return queryList(sql, pstmt -> pstmt.setString(1, gender));
     }
 
     @Override
     public List<Student> findByRaceEthnicity(String raceEthnicity) throws SQLException {
+        StudentValidator.validateNonBlankFilter("race_ethnicity", raceEthnicity).throwIfInvalid();
         String sql = SELECT_ALL + " WHERE race_ethnicity = ?";
         return queryList(sql, pstmt -> pstmt.setString(1, raceEthnicity));
     }
 
     @Override
     public List<Student> findByGenderAndRaceEthnicity(String gender, String raceEthnicity) throws SQLException {
-        if (gender == null && raceEthnicity == null) {
-            return findAll();
-        }
-        if (gender == null) {
-            return findByRaceEthnicity(raceEthnicity);
-        }
-        if (raceEthnicity == null) {
-            return findByGender(gender);
-        }
+        // both null is valid — intentional "no filter" shorthand
+        if (gender == null && raceEthnicity == null) return findAll();
+        if (gender == null)       return findByRaceEthnicity(raceEthnicity);
+        if (raceEthnicity == null) return findByGender(gender);
         String sql = SELECT_ALL + " WHERE gender = ? AND race_ethnicity = ?";
         return queryList(sql, pstmt -> {
             pstmt.setString(1, gender);
@@ -123,6 +124,7 @@ public class StudentDaoImpl implements StudentDao {
 
     @Override
     public List<Student> findByAllScoresAbove(int minScore) throws SQLException {
+        StudentValidator.validateScoreThreshold(minScore).throwIfInvalid();
         String sql = SELECT_ALL + " WHERE math_score > ? AND reading_score > ? AND writing_score > ?"
                    + " ORDER BY (math_score + reading_score + writing_score) DESC";
         return queryList(sql, pstmt -> {
@@ -134,12 +136,14 @@ public class StudentDaoImpl implements StudentDao {
 
     @Override
     public List<Student> findTopByAverageScore(int limit) throws SQLException {
+        StudentValidator.validateLimit(limit).throwIfInvalid();
         String sql = SELECT_ALL + " ORDER BY (math_score + reading_score + writing_score) DESC LIMIT ?";
         return queryList(sql, pstmt -> pstmt.setInt(1, limit));
     }
 
     @Override
     public List<Student> findByParentalEducation(String education) throws SQLException {
+        StudentValidator.validateNonBlankFilter("parental_level_of_education", education).throwIfInvalid();
         String sql = SELECT_ALL + " WHERE parental_level_of_education = ?";
         return queryList(sql, pstmt -> pstmt.setString(1, education));
     }

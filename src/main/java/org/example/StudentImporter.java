@@ -5,6 +5,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.example.validation.StudentValidator;
+import org.example.validation.ValidationResult;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -51,33 +54,29 @@ public class StudentImporter {
 
                 String[] fields = CsvParser.parseLine(line);
 
-                if (fields.length != 8) {
-                    System.err.printf("[WARN] Line %d has %d fields (expected 8), skipping: %s%n",
-                            lineNumber, fields.length, line);
+                ValidationResult validation = StudentValidator.validateCsvRow(fields);
+                if (!validation.isValid()) {
+                    System.err.printf("[WARN] Line %d skipped — %s%n",
+                            lineNumber, validation.getErrorMessage());
                     continue;
                 }
 
-                try {
-                    pstmt.setString(1, fields[0]);
-                    pstmt.setString(2, fields[1]);
-                    pstmt.setString(3, fields[2]);
-                    pstmt.setString(4, fields[3]);
-                    pstmt.setString(5, fields[4]);
-                    pstmt.setInt(6, Integer.parseInt(fields[5].trim()));
-                    pstmt.setInt(7, Integer.parseInt(fields[6].trim()));
-                    pstmt.setInt(8, Integer.parseInt(fields[7].trim()));
+                pstmt.setString(1, fields[0]);
+                pstmt.setString(2, fields[1]);
+                pstmt.setString(3, fields[2]);
+                pstmt.setString(4, fields[3]);
+                pstmt.setString(5, fields[4]);
+                pstmt.setInt(6, Integer.parseInt(fields[5].trim()));
+                pstmt.setInt(7, Integer.parseInt(fields[6].trim()));
+                pstmt.setInt(8, Integer.parseInt(fields[7].trim()));
 
-                    pstmt.addBatch();
-                    rowsImported++;
+                pstmt.addBatch();
+                rowsImported++;
 
-                    if (rowsImported % BATCH_SIZE == 0) {
-                        pstmt.executeBatch();
-                        connection.commit();
-                        System.out.printf("[IMPORT] %d rows inserted...%n", rowsImported);
-                    }
-
-                } catch (NumberFormatException e) {
-                    System.err.printf("[WARN] Line %d has invalid score value, skipping: %s%n", lineNumber, line);
+                if (rowsImported % BATCH_SIZE == 0) {
+                    pstmt.executeBatch();
+                    connection.commit();
+                    System.out.printf("[IMPORT] %d rows inserted...%n", rowsImported);
                 }
             }
 
